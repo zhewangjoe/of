@@ -10,7 +10,7 @@
 
 <node client_id="OVS" >
     <sliver_type name="emulab-xen">
-    <disk_image url="https://www.instageni.clemson.edu/image_metadata.php?uuid=8225f0de-be6b-11e3-aa52-000000000000" />
+    <disk_image url="https://www.instageni.wisc.edu/image_metadata.php?uuid=9e39d771-c1cf-11e3-853f-000000000000" />
     </sliver_type>
     <services>  
 	      <execute command="sudo /local/install-script-wireshark.sh" shell="sh"/>
