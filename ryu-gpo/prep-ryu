@@ -1,0 +1,19 @@
+#!/bin/bash
+
+apt-get update
+apt-get install --yes libxml2-dev libxslt1-dev python-dev python-eventlet python-routes python-webob python-paramiko python-setuptools python-pip
+cd /tmp/
+git clone git://github.com/osrg/ryu.git
+cd ryu
+python ./setup.py install
+mkdir ryu/ext/
+mv /tmp/ryu-gpo/DuplicateTraffic.py ryu/ext/
+mv /tmp/ryu-gpo/PortForwarding.py ryu/ext/
+mv /tmp/ryu-gpo/Proxy.py ryu/ext/
+mv /tmp/ryu-gpo/duplicate.config ryu/ext/
+mv /tmp/ryu-gpo/port_forward.config ryu/ext/
+mv /tmp/ryu-gpo/proxy.config ryu/ext/
+mv /tmp/ryu-gpo/simple_switch.py ryu/ext/
+mv /tmp/ryu-gpo/utils.py ryu/ext/
+
+#/bin/bash /tmp/ryu-gpo/geniovs.sh
