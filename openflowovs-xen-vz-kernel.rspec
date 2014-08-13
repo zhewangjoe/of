@@ -10,13 +10,11 @@
 
 <node client_id="OVS" >
     <sliver_type name="emulab-xen">
-    <disk_image name="urn:publicid:IDN+utahddc.geniracks.net+image+emulab-ops:Ubuntu12-64-OVS" />
+    <disk_image url="https://www.instageni.clemson.edu/image_metadata.php?uuid=8225f0de-be6b-11e3-aa52-000000000000" />
     </sliver_type>
     <services>  
-	      <execute command="sudo /local/install-script.sh" shell="sh"/>
 	      <execute command="sudo /local/install-script-wireshark.sh" shell="sh"/>
         <install install_path="/local" url="http://www.gpolab.bbn.com/experiment-support/OpenFlowOVS/wireshark.tar.gz"/>
-        <install install_path="/local" url="http://www.gpolab.bbn.com/experiment-support/OpenFlowOVS/of-ovs.tar.gz"/>
      </services>
      <interface client_id="OVS:if0"><ip address="10.10.1.11" netmask="" type="ipv4"/></interface>
      <interface client_id="OVS:if1"><ip address="10.10.1.12" netmask="" type="ipv4"/></interface>

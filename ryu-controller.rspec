@@ -8,8 +8,7 @@
     <services>
       <install install_path="/tmp" url="http://www.research.rutgers.edu/~zhewang/of/ryu-gpo.tar.gz"/>
       <install install_path="/local" url="http://www.gpolab.bbn.com/experiment-support/OpenFlowOVS/wireshark.tar.gz"/>
-	    <execute command="sudo /local/install-script-wireshark.sh" shell="sh"/>
-	    <execute command="sudo /tmp/ryu-gpo/prep-ryu" shell="sh"/>
+	    <execute command="sudo sh /tmp/ryu-gpo/prep-ryu; sudo /local/install-script-wireshark.sh" shell="sh"/>
     </services>
     <flack:node_info x="441" y="148" unbound="true"/>
   </node>
