@@ -32,8 +32,6 @@ from ryu.lib.packet import ethernet
 
 '''
 This file is edited from Ryu example which is located at  ryu/ryu/app/simple_switch.py.
-According to its licecse(please don't trust my reading and read it), we can modify and use it as long as we keep the old license and state we've change the code.
-I basicaally did not change the code except refactoring the _packet_in_handler function into several small functions to make it more reusable.  --Joe
 '''
 class SimpleSwitch(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
@@ -42,19 +40,14 @@ class SimpleSwitch(app_manager.RyuApp):
         super(SimpleSwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
 
-    '''
-    # This is a very bad written function. It used to have only one matching field --- dst ip.
-    # This makes port forwarding not working; as arp packet can add a flow matching ip packet.
-    # I added a matching field of dl_type to make our current example work.
-    # The main reason this is awkward is that there is not (or just I couldn't find) a similar function like of.ofp_match.from_packet()
-    '''
     def add_flow(self, datapath, in_port, dst, actions, ethertype):
         ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
 
-        match = datapath.ofproto_parser.OFPMatch(
+        match = parser.OFPMatch(
             in_port=in_port, dl_dst=haddr_to_bin(dst), dl_type=ethertype)
 
-        mod = datapath.ofproto_parser.OFPFlowMod(
+        mod = parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
             command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
             priority=ofproto.OFP_DEFAULT_PRIORITY,
@@ -63,44 +56,45 @@ class SimpleSwitch(app_manager.RyuApp):
 
     def get_out_port(self,msg):
 
-	pkt = packet.Packet(msg.data)
+        pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
         dst = eth.dst
-	datapath = msg.datapath
-	dpid = datapath.id
-	ofproto = datapath.ofproto
+        datapath = msg.datapath
+        dpid = datapath.id
+        ofproto = datapath.ofproto
 
-	if dst in self.mac_to_port[dpid]:
+        if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
             out_port = ofproto.OFPP_FLOOD
-	return out_port
+        return out_port
 
     def macLearningHandle(self, msg) :
-	# learn a mac address to avoid FLOOD next time.
-	datapath = msg.datapath
-	pkt = packet.Packet(msg.data)
-	eth = pkt.get_protocol(ethernet.ethernet)
-	src = eth.src
-	dpid = datapath.id	
+        # learn a mac address to avoid FLOOD next time.
+        datapath = msg.datapath
+        pkt = packet.Packet(msg.data)
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src = eth.src
+        dpid = datapath.id	
 
-	self.mac_to_port.setdefault(dpid, {})
+        self.mac_to_port.setdefault(dpid, {})
 	
-	self.mac_to_port[dpid][src] = msg.in_port
+        self.mac_to_port[dpid][src] = msg.in_port
 
     def forward_packet(self, msg, actions, out_port) :
 
-	pkt = packet.Packet(msg.data)
+        pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
         dst = eth.dst
-	datapath = msg.datapath
-	ofproto = datapath.ofproto
+        datapath = msg.datapath
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
 
-	# install a flow to avoid packet_in next time
+        # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
             self.add_flow(datapath, msg.in_port, dst, actions, eth.ethertype)
 
-        out = datapath.ofproto_parser.OFPPacketOut(
+        out = parser.OFPPacketOut(
             datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
             actions=actions)
         datapath.send_msg(out)
@@ -110,35 +104,20 @@ class SimpleSwitch(app_manager.RyuApp):
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
         pkt = packet.Packet(msg.data)
-	eth = pkt.get_protocol(ethernet.ethernet)
-	dst = eth.dst
+        eth = pkt.get_protocol(ethernet.ethernet)
+        dst = eth.dst
         src = eth.src
 
         dpid = datapath.id
 
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
-	self.macLearningHandle(msg)
+        self.macLearningHandle(msg)
 
-	out_port = self.get_out_port(msg)	
+        out_port = self.get_out_port(msg)	
 
-        actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+        actions = [parser.OFPActionOutput(out_port)]
 
-	self.forward_packet(msg, actions, out_port)
-
-    @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
-    def _port_status_handler(self, ev):
-        msg = ev.msg
-        reason = msg.reason
-        port_no = msg.desc.port_no
-
-        ofproto = msg.datapath.ofproto
-        if reason == ofproto.OFPPR_ADD:
-            self.logger.info("port added %s", port_no)
-        elif reason == ofproto.OFPPR_DELETE:
-            self.logger.info("port deleted %s", port_no)
-        elif reason == ofproto.OFPPR_MODIFY:
-            self.logger.info("port modified %s", port_no)
-        else:
-            self.logger.info("Illeagal port state %s %s", port_no, reason)
+        self.forward_packet(msg, actions, out_port)

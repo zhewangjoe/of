@@ -50,6 +50,8 @@ class DuplicateTrafficSwitch(SimpleSwitch):
 
         out_port = self.get_out_port(msg)
 
-        actions = [parser.OFPActionOutput(out_port), parser.OFPActionOutput(self._of_duplicate_port)]
+        # XXX Modify the following line to forward packets
+        # out the normal port and the duplication port
+        actions = [parser.OFPActionOutput(out_port)]
 
         self.forward_packet(msg, actions, out_port)

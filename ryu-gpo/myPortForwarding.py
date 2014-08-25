@@ -49,18 +49,10 @@ class PortForwardingSwitch(SimpleSwitch):
         
         # XXX If packet is destined to serverip:original port
         # make the appropriate rewrite
-        if packetDstIp(msg, self._serverip): 
-            if packetDstTCPPort(msg, self._origport) :
-                match = parser.OFPMatch(in_port=msg.in_port, dl_dst=haddr_to_bin(dst), tp_dst=self._origport, dl_type=ethertype)
-                actions.append( parser.OFPActionSetTpDst( self._forwport ) )
-
+        
         # XXX If packet is sourced at serverip:forward port
         # make the appropriate rewrite
-        if packetSrcIp(msg, self._serverip):
-            if packetSrcTCPPort(msg, self._forwport) :
-                match = parser.OFPMatch(in_port=msg.in_port, dl_src=haddr_to_bin(src), tp_src=self._forwport, dl_type=ethertype)
-                actions.append( parser.OFPActionSetTpSrc( self._origport ) )
-	
+        
         '''
         Fun finding: Order in the actions list matters!
         OFPActionOutput needs to be later than OFPActionSetTpDst/Src in the actions list.
@@ -69,14 +61,7 @@ class PortForwardingSwitch(SimpleSwitch):
         actions.append(parser.OFPActionOutput(out_port))
 
         # XXX Create the flow mod message	
-        if out_port != ofproto.OFPP_FLOOD:
-            mod = parser.OFPFlowMod(
-                datapath=datapath, match=match, cookie=0,
-                command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
-                priority=ofproto.OFP_DEFAULT_PRIORITY,
-                flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
-            datapath.send_msg(mod)
-	
+        
         out = parser.OFPPacketOut(
             datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
             actions=actions)

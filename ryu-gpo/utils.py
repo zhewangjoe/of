@@ -61,7 +61,7 @@ def packetIsReplyARP(message) :
 
     a = pkt.get_protocol(arp.arp)
     if a.opcode == arp.ARP_REPLY :
-	return True
+        return True
     return False
 
 def packetIsTCP(message) :
@@ -69,15 +69,15 @@ def packetIsTCP(message) :
 
     ip = pkt.get_protocol(ipv4.ipv4)
     if ip is not None and ip.proto == 6 :
-	return True
+        return True
     return False
 
 def packetDstIp(message, ipaddr) :
     if packetIsIP(message):
-	pkt = packet.Packet(message.data)
-	ip = pkt.get_protocol(ipv4.ipv4)
+        pkt = packet.Packet(message.data)
+        ip = pkt.get_protocol(ipv4.ipv4)
     	if not cmp(ip.dst, ipaddr):
-		return True
+            return True
     return False
 
 def packetSrcIp(message, ipaddr) :
@@ -85,23 +85,23 @@ def packetSrcIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         ip = pkt.get_protocol(ipv4.ipv4)
         if not cmp(ip.src, ipaddr):
-                return True
+            return True
     return False
 
 def packetDstTCPPort(message, tcpport) :
     if packetIsTCP(message) :
-	pkt = packet.Packet(message.data)
+        pkt = packet.Packet(message.data)
         dsttcp = pkt.get_protocol(tcp.tcp)
-	if dsttcp.dst_port == tcpport :
-		return True
+        if dsttcp.dst_port == tcpport :
+            return True
     return False
 
 def packetSrcTCPPort(message, tcpport) :
     if packetIsTCP(message) :
         pkt = packet.Packet(message.data)
         srctcp = pkt.get_protocol(tcp.tcp)
-	if srctcp.src_port == tcpport :
-                return True
+        if srctcp.src_port == tcpport :
+            return True
     return False
 
 def packetArpDstIp(message, ipaddr) :
@@ -109,7 +109,7 @@ def packetArpDstIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         a = pkt.get_protocol(arp.arp)
         if not cmp(a.dst_ip, ipaddr):
-                return True
+            return True
     return False
 
 def packetArpSrcIp(message, ipaddr) :
@@ -117,7 +117,7 @@ def packetArpSrcIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         a = pkt.get_protocol(arp.arp)
         if not cmp(a.src_ip, ipaddr):
-                return True
+            return True
     return False
 
 def createArpRequest(message, ip):
@@ -129,13 +129,13 @@ def createArpRequest(message, ip):
     a = arp.arp(
     	hwtype=origarp.hwtype,
     	proto=origarp.proto,
-	src_mac=origarp.src_mac,
+        src_mac=origarp.src_mac,
     	dst_mac=origarp.dst_mac,
-	hlen=origarp.hlen,
+        hlen=origarp.hlen,
     	opcode=arp.ARP_REQUEST,
     	plen=origarp.plen,
-	src_ip=origarp.src_ip,
-	dst_ip=ip
+        src_ip=origarp.src_ip,
+        dst_ip=ip
 	)
     e = ethernet.ethernet(
 	dst=mac.BROADCAST_STR,
@@ -176,10 +176,10 @@ def createArpReply(message, ip):
 
 def ipv4_to_int(string):
 	ip = string.split('.')
-       	assert len(ip) == 4
-       	i = 0
-       	for b in ip:
-    		b = int(b)
-        	i = (i << 8) | b
-        return i
+    assert len(ip) == 4
+    i = 0
+    for b in ip:
+        b = int(b)
+        i = (i << 8) | b
+    return i
 

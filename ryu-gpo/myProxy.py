@@ -49,19 +49,11 @@ class ProxySwitch(SimpleSwitch):
            #print("DROP ARP Packet From Server!")
            return
 
-        # If this is an ARP Request for the server iP
+        # XXX If this is an ARP Request for the server iP
         # create new ARP request and save it in arppkt
-        if packetIsRequestARP(msg) : 
-           #print("Packet is an ARP Request")
-           if packetArpDstIp(msg, self._serverip):
-                arppkt = createArpRequest(msg, self._proxyip)
         
-        # If this is an ARP Reply from the proxy
+        # XXX If this is an ARP Reply from the proxy
         # create new ARP reply  and save it in arppkt
-        if packetIsReplyARP(msg) : 
-           #print("Packet is an ARP Reply")
-           if packetArpSrcIp(msg, self._proxyip):
-                arppkt = createArpReply(msg, self._serverip)
         
         # If we haven't created a new arp packet, send the one we 
         # received
@@ -95,30 +87,13 @@ class ProxySwitch(SimpleSwitch):
         
         # XXX If packet is destined to serverip:server port
         # make the appropriate rewrite
-        if packetDstIp(msg, self._serverip) : 
-        	if packetDstTCPPort(msg, self._serverport) :
-		        match = parser.OFPMatch(in_port=msg.in_port, dl_dst=haddr_to_bin(dst), tp_dst=self._serverport, dl_type=ethertype)
-		        actions.append( parser.OFPActionSetTpDst( self._proxyport ) )
-		        actions.append( parser.OFPActionSetNwDst( ipv4_to_int( self._proxyip ) ) )
 
         # XXX If packet is sourced at proxyip:proxy port
         # make the appropriate rewrite
-        if packetSrcIp(msg, self._proxyip) :
-            if packetSrcTCPPort(msg, self._proxyport) :
-		        match = parser.OFPMatch(in_port=msg.in_port, dl_src=haddr_to_bin(src), tp_src=self._proxyport, dl_type=ethertype)
-		        actions.append( parser.OFPActionSetTpSrc( self._serverport ) )
-		        actions.append( parser.OFPActionSetNwSrc( ipv4_to_int( self._serverip ) ) )
 	
         actions.append(parser.OFPActionOutput(out_port))
 
         # XXX Create the flow mod message	
-        if out_port != ofproto.OFPP_FLOOD:
-            mod = parser.OFPFlowMod(
-                datapath=datapath, match=match, cookie=0,
-                command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
-                priority=ofproto.OFP_DEFAULT_PRIORITY,
-                flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
-        	datapath.send_msg(mod)
 		
         out = parser.OFPPacketOut(
             datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
