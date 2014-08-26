@@ -6,7 +6,10 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ipv4
 from ryu.lib.packet import tcp
+from ryu.lib.packet import udp
+from ryu.lib.packet import icmp
 from ryu.lib.packet import arp
+from ryu.lib.packet import vlan
 from ryu.lib import mac
 
 def readConfigFile(filename) :
@@ -61,7 +64,7 @@ def packetIsReplyARP(message) :
 
     a = pkt.get_protocol(arp.arp)
     if a.opcode == arp.ARP_REPLY :
-        return True
+	return True
     return False
 
 def packetIsTCP(message) :
@@ -69,15 +72,15 @@ def packetIsTCP(message) :
 
     ip = pkt.get_protocol(ipv4.ipv4)
     if ip is not None and ip.proto == 6 :
-        return True
+	return True
     return False
 
 def packetDstIp(message, ipaddr) :
     if packetIsIP(message):
-        pkt = packet.Packet(message.data)
-        ip = pkt.get_protocol(ipv4.ipv4)
+	pkt = packet.Packet(message.data)
+	ip = pkt.get_protocol(ipv4.ipv4)
     	if not cmp(ip.dst, ipaddr):
-            return True
+		return True
     return False
 
 def packetSrcIp(message, ipaddr) :
@@ -85,23 +88,23 @@ def packetSrcIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         ip = pkt.get_protocol(ipv4.ipv4)
         if not cmp(ip.src, ipaddr):
-            return True
+                return True
     return False
 
 def packetDstTCPPort(message, tcpport) :
     if packetIsTCP(message) :
-        pkt = packet.Packet(message.data)
+	pkt = packet.Packet(message.data)
         dsttcp = pkt.get_protocol(tcp.tcp)
-        if dsttcp.dst_port == tcpport :
-            return True
+	if dsttcp.dst_port == tcpport :
+		return True
     return False
 
 def packetSrcTCPPort(message, tcpport) :
     if packetIsTCP(message) :
         pkt = packet.Packet(message.data)
         srctcp = pkt.get_protocol(tcp.tcp)
-        if srctcp.src_port == tcpport :
-            return True
+	if srctcp.src_port == tcpport :
+                return True
     return False
 
 def packetArpDstIp(message, ipaddr) :
@@ -109,7 +112,7 @@ def packetArpDstIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         a = pkt.get_protocol(arp.arp)
         if not cmp(a.dst_ip, ipaddr):
-            return True
+                return True
     return False
 
 def packetArpSrcIp(message, ipaddr) :
@@ -117,7 +120,7 @@ def packetArpSrcIp(message, ipaddr) :
         pkt = packet.Packet(message.data)
         a = pkt.get_protocol(arp.arp)
         if not cmp(a.src_ip, ipaddr):
-            return True
+                return True
     return False
 
 def createArpRequest(message, ip):
@@ -129,13 +132,13 @@ def createArpRequest(message, ip):
     a = arp.arp(
     	hwtype=origarp.hwtype,
     	proto=origarp.proto,
-        src_mac=origarp.src_mac,
+	src_mac=origarp.src_mac,
     	dst_mac=origarp.dst_mac,
-        hlen=origarp.hlen,
+	hlen=origarp.hlen,
     	opcode=arp.ARP_REQUEST,
     	plen=origarp.plen,
-        src_ip=origarp.src_ip,
-        dst_ip=ip
+	src_ip=origarp.src_ip,
+	dst_ip=ip
 	)
     e = ethernet.ethernet(
 	dst=mac.BROADCAST_STR,
@@ -176,10 +179,99 @@ def createArpReply(message, ip):
 
 def ipv4_to_int(string):
 	ip = string.split('.')
-    assert len(ip) == 4
-    i = 0
-    for b in ip:
-        b = int(b)
-        i = (i << 8) | b
-    return i
+       	assert len(ip) == 4
+       	i = 0
+       	for b in ip:
+    		b = int(b)
+        	i = (i << 8) | b
+        return i
 
+def sendPacketOut( msg, actions, buffer_id=0xffffffff, data=None ):
+    datapath = msg.datapath
+    parser = datapath.ofproto_parser
+
+    if buffer_id == 0xffffffff :
+        out = parser.OFPPacketOut(
+            datapath=datapath, buffer_id=buffer_id, in_port=msg.in_port,
+            actions=actions, data=data)
+        datapath.send_msg(out)
+    else :
+        out = parser.OFPPacketOut(
+            datapath=datapath, buffer_id=buffer_id, in_port=msg.in_port,
+            actions=actions)
+        datapath.send_msg(out)
+
+def getFullMatch( msg ):
+    datapath = msg.datapath
+    parser = datapath.ofproto_parser
+    
+    in_port=None
+    dl_src=None
+    dl_dst=None
+    dl_vlan=None
+    dl_vlan_pcp=None
+    dl_type=None
+    nw_tos=None
+    nw_proto=None
+    nw_src=None
+    nw_dst=None
+    tp_src=None
+    tp_dst=None
+    
+    in_port = msg.in_port
+
+    pkt = packet.Packet(msg.data)
+    eth = pkt.get_protocol(ethernet.ethernet)
+
+    dl_src = eth.src
+    dl_dst = eth.dst
+    dl_type = eth.ethertype
+
+    vl = pkt.get_protocol(vlan.vlan)
+    if vl is not None :
+        dl_vlan = vl.vid
+        dl_vlan_pcp = vl.pcp
+        dl_type = vl.ethertype
+    
+    ip = pkt.get_protocol(ipv4.ipv4)
+    if ip is not None :
+        nw_src = ip.src
+        nw_dst = ip.dst
+        nw_proto = ip.proto
+        nw_tos = ip.tos
+
+        t = pkt.get_protocol(tcp.tcp)
+        if t is not None :
+            tp_src = t.src_port
+            tp_dst = t.dst_port
+
+        u = pkt.get_protocol(udp.udp)   
+        if u is not None :
+            tp_src = u.src_port
+            tp_dst = u.dst_port
+    
+        ic = pkt.get_protocol(icmp.icmp)
+        if ic is not None :
+            tp_src = ic.type
+            tp_dst = ic.code
+    
+    a = pkt.get_protocol(arp.arp)
+    if a is not None :
+        nw_src = a.src_ip
+        nw_dst = a.dst_ip
+        nw_proto = a.opcode
+
+    match = parser.OFPMatch( 
+        dl_src=mac.haddr_to_bin(dl_src), 
+        dl_dst=mac.haddr_to_bin(dl_dst), 
+        dl_vlan=dl_vlan, 
+        dl_vlan_pcp=dl_vlan_pcp, 
+        dl_type=dl_type, 
+        nw_tos=nw_tos, 
+        nw_proto=nw_proto, 
+        nw_src=ipv4_to_int(nw_src), 
+        nw_dst=ipv4_to_int(nw_dst), 
+        tp_src=tp_src, 
+        tp_dst=tp_dst,
+        in_port=in_port )
+    return match

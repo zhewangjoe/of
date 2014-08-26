@@ -21,7 +21,7 @@ class DuplicateTrafficSwitch(SimpleSwitch):
     def __init__(self, *args, **kwargs):
         SimpleSwitch.__init__(self, *args, **kwargs)
         config = readConfigFile(config_file)
-        self._of_duplicate_port=int(config["general"]["duplicate_port"])
+	self._of_duplicate_port=int(config["general"]["duplicate_port"])
 
     '''
     I didn't log because
@@ -42,9 +42,9 @@ class DuplicateTrafficSwitch(SimpleSwitch):
     '''
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-        msg = ev.msg
+	msg = ev.msg
         datapath = msg.datapath
-        parser = datapath.ofproto_parser
+	parser = datapath.ofproto_parser	
 
         self.macLearningHandle(msg)
 
