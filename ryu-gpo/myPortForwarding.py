@@ -8,6 +8,8 @@ from utils import *
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 config_file = os.path.join(SCRIPT_PATH, "port_forward.config")
+FLOW_HARD_TIMEOUT = 30
+FLOW_IDLE_TIMEOUT = 10
 
 class PortForwardingSwitch(SimpleSwitch):
 
@@ -36,7 +38,6 @@ class PortForwardingSwitch(SimpleSwitch):
         msg = ev.msg
         datapath = msg.datapath
         out_port = self.get_out_port(msg)
-        parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
 	
         actions = []
@@ -46,13 +47,8 @@ class PortForwardingSwitch(SimpleSwitch):
         # XXX If packet is sourced at serverip:forward port
         # make the appropriate rewrite
         	
-        '''
-        Fun finding: Order in the actions list matters!
-        OFPActionOutput needs to be later than OFPActionSetTpDst/Src in the actions list.
-        Otherwise, it will send out the packet before changing it.
-        '''
         actions.append( createOFAction(datapath, ofproto.OFPAT_OUTPUT, out_port))
         
-        add_flow(actions, msg)
-
-        sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)
+        match = getFullMatch( msg )
+        
+        sendFlowMod(msg, match, actions, FLOW_HARD_TIMEOUT, FLOW_IDLE_TIMEOUT, msg.buffer_id)

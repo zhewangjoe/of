@@ -296,18 +296,16 @@ def createOFAction(datapath, action_type, arg) :
         return parser.OFPActionSetTpDst(arg)
     return None
     
-def add_flow(actions, msg):
+def sendFlowMod(msg, match, actions, hard_timeout, idle_timeout, buffer_id=None):
     datapath = msg.datapath
     ofproto = datapath.ofproto
     parser = datapath.ofproto_parser
 
-    match = getFullMatch( msg )
-
     mod = parser.OFPFlowMod(
         datapath=datapath, match=match, cookie=0,
-        command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
+        command=ofproto.OFPFC_ADD, idle_timeout=idle_timeout, hard_timeout=hard_timeout,
         priority=ofproto.OFP_DEFAULT_PRIORITY,
-        flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
+        flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions, buffer_id=buffer_id)
     datapath.send_msg(mod)
 
 

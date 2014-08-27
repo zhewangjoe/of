@@ -34,6 +34,10 @@ from utils import *
 This file is edited from Ryu example which is located at  ryu/ryu/app/simple_switch.py.
 According to its licecse(please don't trust my reading and read it), we can modify and use it as long as we keep the old license and state we've change the code. --Joe
 '''
+
+FLOW_HARD_TIMEOUT = 30
+FLOW_IDLE_TIMEOUT = 10
+
 class SimpleSwitch(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
 
@@ -80,9 +84,11 @@ class SimpleSwitch(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if ofproto.OFPP_FLOOD not in port_list:
-            add_flow(actions, msg)
+            match = getFullMatch( msg )
+            sendFlowMod(msg, match, actions, FLOW_HARD_TIMEOUT, FLOW_IDLE_TIMEOUT, msg.buffer_id)
+        else :
 
-        sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)
+            sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):

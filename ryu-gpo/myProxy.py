@@ -8,6 +8,8 @@ from utils import *
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 config_file = os.path.join(SCRIPT_PATH, "proxy.config")
+FLOW_HARD_TIMEOUT = 30
+FLOW_IDLE_TIMEOUT = 10
 
 class ProxySwitch(SimpleSwitch):
 
@@ -40,7 +42,6 @@ class ProxySwitch(SimpleSwitch):
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto	
-        parser = datapath.ofproto_parser
         arppkt = None
 
         # If this an ARP Packet srcd at the server, 
@@ -59,11 +60,11 @@ class ProxySwitch(SimpleSwitch):
         # received
         if arppkt is None :
             SimpleSwitch._packet_in_handler(self, ev)
-        	return
+            return
 
         # Send a packet out with the ARP
         actions = [createOFAction(datapath, ofproto.OFPAT_OUTPUT, ofproto.OFPP_FLOOD)]
-
+        
         sendPacketOut(msg=msg, actions=actions, data=arppkt.data)
 
     def _handle_PacketInTCP(self, ev):
@@ -71,7 +72,6 @@ class ProxySwitch(SimpleSwitch):
         msg = ev.msg
         datapath = msg.datapath
         out_port = self.get_out_port(msg)
-        parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
 
         actions = []
@@ -83,6 +83,6 @@ class ProxySwitch(SimpleSwitch):
 	
         actions.append( createOFAction(datapath, ofproto.OFPAT_OUTPUT, out_port))
         
-        add_flow(actions, msg)
-
-        sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)
+        match = getFullMatch( msg )
+        
+        sendFlowMod(msg, match, actions, FLOW_HARD_TIMEOUT, FLOW_IDLE_TIMEOUT, msg.buffer_id)
