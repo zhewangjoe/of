@@ -62,7 +62,7 @@ class ProxySwitch(SimpleSwitch):
         	return
 
         # Send a packet out with the ARP
-        actions = createOFAction(datapath, ofproto.OFPAT_OUTPUT, ofproto.OFPP_FLOOD)
+        actions = [createOFAction(datapath, ofproto.OFPAT_OUTPUT, ofproto.OFPP_FLOOD)]
 
         sendPacketOut(msg=msg, actions=actions, data=arppkt.data)
 

@@ -103,9 +103,7 @@ class SimpleSwitch(app_manager.RyuApp):
 
         out_port = self.get_out_port(msg)	
 
-        actions = [parser.OFPActionOutput(out_port)]
-
-        self.forward_packet(msg, actions, out_port)
+        self.forward_packet(msg, [out_port])
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def _port_status_handler(self, ev):
