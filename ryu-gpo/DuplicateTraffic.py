@@ -21,35 +21,15 @@ class DuplicateTrafficSwitch(SimpleSwitch):
     def __init__(self, *args, **kwargs):
         SimpleSwitch.__init__(self, *args, **kwargs)
         config = readConfigFile(config_file)
-	self._of_duplicate_port=int(config["general"]["duplicate_port"])
+        self._of_duplicate_port=int(config["general"]["duplicate_port"])
 
-    '''
-    I didn't log because
-    to log, we need parse the packet one more time, by:
-    pkt = packet.Packet(msg.data)
-    eth = pkt.get_protocol(ethernet.ethernet)
-    dstmac = eth.dst
-    srcmac = eth.src
-    ip = pkt.get_protocol(ipv4.ipv4)
-    srcip = ip.src
-    dstip = ip.dst
-    t = pkt.get_protocol(tcp.tcp)
-    srcport = t.src_port
-    dstport = t.dst_port
-    slef.logger.info( "packet in %s %i s% --> %s %i %s", srcip, srcport, srcmac, dstip, dstport, dstmac )
-
-    So add log when you need and parse accordingly.
-    '''
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-	msg = ev.msg
-        datapath = msg.datapath
-	parser = datapath.ofproto_parser	
 
+        msg = ev.msg
+        
         self.macLearningHandle(msg)
 
         out_port = self.get_out_port(msg)
 
-        actions = [parser.OFPActionOutput(out_port), parser.OFPActionOutput(self._of_duplicate_port)]
-
-        self.forward_packet(msg, actions, out_port)
+        self.forward_packet(msg, [out_port, self._of_duplicate_port])

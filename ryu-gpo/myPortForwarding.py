@@ -15,37 +15,44 @@ class PortForwardingSwitch(SimpleSwitch):
     def __init__(self, *args, **kwargs):
         SimpleSwitch.__init__(self, *args, **kwargs)
         config = readConfigFile(config_file)
-	self._serverip = config["general"]['server_ip']
+        self._serverip = config["general"]['server_ip']
         self._origport = int(config["general"]['orig_port'])
         self._forwport = int(config["general"]['forw_port'])
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-	msg = ev.msg
+        msg = ev.msg
         datapath = msg.datapath
 
         self.macLearningHandle(msg)
 
-	if packetIsTCP(msg) :
+        if packetIsTCP(msg) :
         	self._handle_PacketInTCP(ev)
         	return
         SimpleSwitch._packet_in_handler(self, ev)
 
     def _handle_PacketInTCP(self, ev):
 
-	msg = ev.msg
+        msg = ev.msg
         datapath = msg.datapath
-	out_port = self.get_out_port(msg)
-	parser = datapath.ofproto_parser
-	ofproto = datapath.ofproto
+        out_port = self.get_out_port(msg)
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
 	
-	actions = []
+        actions = []
         # XXX If packet is destined to serverip:original port
         # make the appropriate rewrite
 
         # XXX If packet is sourced at serverip:forward port
         # make the appropriate rewrite
         	
-	actions.append(parser.OFPActionOutput(out_port))
+        '''
+        Fun finding: Order in the actions list matters!
+        OFPActionOutput needs to be later than OFPActionSetTpDst/Src in the actions list.
+        Otherwise, it will send out the packet before changing it.
+        '''
+        actions.append( createOFAction(datapath, ofproto.OFPAT_OUTPUT, out_port))
+        
+        add_flow(actions, msg)
 
-        self.forward_packet(msg, actions, out_port)
+        sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)

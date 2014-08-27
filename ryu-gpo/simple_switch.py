@@ -41,55 +41,46 @@ class SimpleSwitch(app_manager.RyuApp):
         super(SimpleSwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
 
-    def add_flow(self, actions, msg):
-        datapath = msg.datapath
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        match = getFullMatch( msg )
-
-        mod = parser.OFPFlowMod(
-            datapath=datapath, match=match, cookie=0,
-            command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
-            priority=ofproto.OFP_DEFAULT_PRIORITY,
-            flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
-        datapath.send_msg(mod)
-
     def get_out_port(self,msg):
 
-	pkt = packet.Packet(msg.data)
+        pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
         dst = eth.dst
-	datapath = msg.datapath
-	dpid = datapath.id
-	ofproto = datapath.ofproto
+        datapath = msg.datapath
+        dpid = datapath.id
+        ofproto = datapath.ofproto
 
-	if dst in self.mac_to_port[dpid]:
+        if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
             out_port = ofproto.OFPP_FLOOD
-	return out_port
+        return out_port
 
     def macLearningHandle(self, msg) :
-	# learn a mac address to avoid FLOOD next time.
-	datapath = msg.datapath
-	pkt = packet.Packet(msg.data)
-	eth = pkt.get_protocol(ethernet.ethernet)
-	src = eth.src
-	dpid = datapath.id	
+        # learn a mac address to avoid FLOOD next time.
+        datapath = msg.datapath
+        pkt = packet.Packet(msg.data)
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src = eth.src
+        dpid = datapath.id	
 
-	self.mac_to_port.setdefault(dpid, {})
+        self.mac_to_port.setdefault(dpid, {})
 	
-	self.mac_to_port[dpid][src] = msg.in_port
+        self.mac_to_port[dpid][src] = msg.in_port
 
-    def forward_packet(self, msg, actions, out_port) :
+    def forward_packet(self, msg, port_list) :
 
-	datapath = msg.datapath
-	ofproto = datapath.ofproto
+        datapath = msg.datapath
+        ofproto = datapath.ofproto
 
-	# install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow( actions, msg)
+        actions = []
+        
+        for p in port_list:
+            actions.append( createOFAction(datapath, ofproto.OFPAT_OUTPUT, p) )
+
+        # install a flow to avoid packet_in next time
+        if ofproto.OFPP_FLOOD not in port_list:
+            add_flow(actions, msg)
 
         sendPacketOut(msg=msg, actions=actions, buffer_id=msg.buffer_id)
 
@@ -100,21 +91,21 @@ class SimpleSwitch(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         pkt = packet.Packet(msg.data)
-	eth = pkt.get_protocol(ethernet.ethernet)
-	dst = eth.dst
+        eth = pkt.get_protocol(ethernet.ethernet)
+        dst = eth.dst
         src = eth.src
 
         dpid = datapath.id
 
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
-	self.macLearningHandle(msg)
+        self.macLearningHandle(msg)
 
-	out_port = self.get_out_port(msg)	
+        out_port = self.get_out_port(msg)	
 
         actions = [parser.OFPActionOutput(out_port)]
 
-	self.forward_packet(msg, actions, out_port)
+        self.forward_packet(msg, actions, out_port)
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def _port_status_handler(self, ev):

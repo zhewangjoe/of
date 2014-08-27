@@ -275,3 +275,39 @@ def getFullMatch( msg ):
         tp_dst=tp_dst,
         in_port=in_port )
     return match
+
+def createOFAction(datapath, action_type, arg) :
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser 
+
+    if action_type == ofproto.OFPAT_OUTPUT : 
+        return parser.OFPActionOutput(arg)
+    if action_type == ofproto.OFPAT_SET_DL_SRC : 
+        return parser.OFPActionSetDlSrc(mac.haddr_to_bin(arg))
+    if action_type == ofproto.OFPAT_SET_DL_DST : 
+        return parser.OFPActionSetDlDst(mac.haddr_to_bin(arg))
+    if action_type == ofproto.OFPAT_SET_NW_SRC : 
+        return parser.OFPActionSetNwSrc(ipv4_to_int(arg))
+    if action_type == ofproto.OFPAT_SET_NW_DST : 
+        return parser.OFPActionSetNwDst(ipv4_to_int(arg))
+    if action_type == ofproto.OFPAT_SET_TP_SRC : 
+        return parser.OFPActionSetTpSrc(arg)
+    if action_type == ofproto.OFPAT_SET_TP_DST : 
+        return parser.OFPActionSetTpDst(arg)
+    return None
+    
+def add_flow(actions, msg):
+    datapath = msg.datapath
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+
+    match = getFullMatch( msg )
+
+    mod = parser.OFPFlowMod(
+        datapath=datapath, match=match, cookie=0,
+        command=ofproto.OFPFC_ADD, idle_timeout=10, hard_timeout=30,
+        priority=ofproto.OFP_DEFAULT_PRIORITY,
+        flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
+    datapath.send_msg(mod)
+
+
